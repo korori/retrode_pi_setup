@@ -1,49 +1,8 @@
 #!/bin/bash
 
-#  Retrode_Pi-Setup - Shell script for initializing Raspberry Pi 
-#  with RetroArch, various cores, and EmulationStation (a graphical 
-#  front end).
-# 
-#  (c) Copyright 2012  Florian Müller (petrockblock@gmail.com)
-# 
-#  Retrode_Pi-Setup homepage: https://github.com/petrockblog/Retrode_Pi-Setup
-# 
-#  Permission to use, copy, modify and distribute Retrode_Pi-Setup in both binary and
-#  source form, for non-commercial purposes, is hereby granted without fee,
-#  providing that this license information and copyright notice appear with
-#  all copies and any derived work.
-# 
-#  This software is provided 'as-is', without any express or implied
-#  warranty. In no event shall the authors be held liable for any damages
-#  arising from the use of this software.
-# 
-#  Retrode_Pi-Setup is freeware for PERSONAL USE only. Commercial users should
-#  seek permission of the copyright holders first. Commercial use includes
-#  charging money for Retrode_Pi-Setup or software derived from Retrode_Pi-Setup.
-# 
-#  The copyright holders request that bug fixes and improvements to the code
-#  should be forwarded to them so everyone can benefit from the modifications
-#  in future versions.
-# 
-#  Many, many thanks go to all people that provide the individual packages!!!
-# 
-#  Raspberry Pi is a trademark of the Raspberry Pi Foundation.
-# 
-
 __ERRMSGS=""
 __INFMSGS=""
 __doReboot=0
-
-# HELPER FUNCTIONS ###
-
-function ask()
-{   
-    echo -e -n "$@" '[y/n] ' ; read ans
-    case "$ans" in
-        y*|Y*) return 0 ;;
-        *) return 1 ;;
-    esac
-}
 
 function addLineToFile()
 {
@@ -56,9 +15,6 @@ function addLineToFile()
     echo "Added $1 to file $2"
 }
 
-# arg 1: key, arg 2: value, arg 3: file
-# make sure that a key-value pair is set in file
-# key = value
 function ensureKeyValue()
 {
     if [[ -z $(egrep -i "#? *$1 = ""?[+|-]?[0-9]*[a-z]*"""? $3) ]]; then
@@ -71,23 +27,7 @@ function ensureKeyValue()
     fi     
 }
 
-# make sure that a key-value pair is NOT set in file
-# # key = value
-function disableKeyValue()
-{
-    if [[ -z $(egrep -i "#? *$1 = ""?[+|-]?[0-9]*[a-z]*"""? $3) ]]; then
-        # add key-value pair
-        echo "# $1 = ""$2""" >> $3
-    else
-        # replace existing key-value pair
-        toreplace=`egrep -i "#? *$1 = ""?[+|-]?[0-9]*[a-z]*"""? $3`
-        sed $3 -i -e "s|$toreplace|# $1 = ""$2""|g"
-    fi     
-}
 
-# arg 1: key, arg 2: value, arg 3: file
-# make sure that a key-value pair is set in file
-# key=value
 function ensureKeyValueShort()
 {
     if [[ -z $(egrep -i "#? *$1\s?=\s?""?[+|-]?[0-9]*[a-z]*"""? $3) ]]; then
@@ -100,30 +40,10 @@ function ensureKeyValueShort()
     fi     
 }
 
-# make sure that a key-value pair is NOT set in file
-# # key=value
-function disableKeyValueShort()
-{
-    if [[ -z $(egrep -i "#? *$1=""?[+|-]?[0-9]*[a-z]*"""? $3) ]]; then
-        # add key-value pair
-        echo "# $1=""$2""" >> $3
-    else
-        # replace existing key-value pair
-        toreplace=`egrep -i "#? *$1=""?[+|-]?[0-9]*[a-z]*"""? $3`
-        sed $3 -i -e "s|$toreplace|# $1=""$2""|g"
-    fi     
-}
 
 function printMsg()
 {
     echo -e "\n= = = = = = = = = = = = = = = = = = = = =\n$1\n= = = = = = = = = = = = = = = = = = = = =\n"
-}
-
-function rel2abs() {
-  cd "$(dirname $1)" && dir="$PWD"
-  file="$(basename $1)"
-
-  echo $dir/$file
 }
 
 function checkForInstalledAPTPackage()
@@ -157,20 +77,6 @@ function gitPullOrClone()
         mkdir -p "$1"
         git clone "$2" "$1"
         pushd "$1"
-    fi
-}
-
-# END HELPER FUNCTIONS ###
-
-function availFreeDiskSpace()
-{
-    local __required=$1
-    local __avail=`df -P $rootdir | tail -n1 | awk '{print $4}'`
-
-    if [[ "$__required" -le "$__avail" ]] || ask "Minimum recommended disk space (500 MB) not available. Try 'sudo raspi-config' to resize partition to full size. Only $__avail available at $rootdir continue anyway?"; then
-        return 0;
-    else
-        exit 0;
     fi
 }
 
@@ -308,7 +214,7 @@ function configureRetroArch()
         mkdir -p "$rootdir/configs/all/"
         mkdir -p "$rootdir/configs/atari2600/"
         echo -e "# All settings made here will override the global settings for the current emulator core\n" >> $rootdir/configs/atari2600/retroarch.cfg
-        mkdir -p "$rootdir/configs/doom/"
+        mkdir -p "$rootdir/configs/gb/"
         echo -e "# All settings made here will override the global settings for the current emulator core\n" >> $rootdir/configs/gb/retroarch.cfg
         mkdir -p "$rootdir/configs/gba/"
         echo -e "# All settings made here will override the global settings for the current emulator core\n" >> $rootdir/configs/gba/retroarch.cfg
@@ -346,136 +252,7 @@ function install_retroarch()
     popd
 }
 
-function sortromsalphabet()
-{
-    clear
-    pathlist=()
-    pathlist+=("$rootdir/roms/amiga")
-    pathlist+=("$rootdir/roms/atari2600")
-    pathlist+=("$rootdir/roms/fba")
-    pathlist+=("$rootdir/roms/gamegear")
-    pathlist+=("$rootdir/roms/gb")
-    pathlist+=("$rootdir/roms/gba")
-    pathlist+=("$rootdir/roms/gbc")
-    pathlist+=("$rootdir/roms/intellivision")
-    pathlist+=("$rootdir/roms/mame")
-    pathlist+=("$rootdir/roms/mastersystem")
-    pathlist+=("$rootdir/roms/megadrive")
-    pathlist+=("$rootdir/roms/neogeo")
-    pathlist+=("$rootdir/roms/nes")
-    pathlist+=("$rootdir/roms/snes")
-    pathlist+=("$rootdir/roms/pcengine")
-    pathlist+=("$rootdir/roms/psx")
-    pathlist+=("$rootdir/roms/zxspectrum")
-    printMsg "Sorting roms alphabetically"
-    for elem in "${pathlist[@]}"
-    do
-        echo "Sorting roms in folder $elem"
-        if [[ -d $elem ]]; then
-            for x in {a..z}
-            do
-                if [[ ! -d $elem/$x ]]; then
-                    mkdir $elem/$x
-                fi
-                find $elem -maxdepth 1 -type f -iname "$x*"| while read line; do
-                    mv "$line" "$elem/$x/$(basename "${line,,}")"
-                done
-            done
-            if [[ -f "$elem/g/gamelist.xml" ]]; then
-                mv "$elem/g/gamelist.xml" "$elem/gamelist.xml"
-            fi
-            if [[ -f "$elem/t/theme.xml" ]]; then
-                mv "$elem/t/theme.xml" "$elem/theme.xml"
-            fi
-            if [[ ! -d "$elem/#" ]]; then
-                mkdir "$elem/#"
-            fi
-            find $elem -maxdepth 1 -type f -iname "[0-9]*"| while read line; do
-                mv "$line" "$elem/#/$(basename "${line,,}")"
-            done
-        fi
-    done  
-    chgrp -R $user $rootdir/roms
-    chown -R $user $rootdir/roms
-}
 
-# downloads and installs pre-compiles binaries of all essential programs and libraries
-function downloadBinaries()
-{
-    wget -O binariesDownload.tar.bz2 http://blog.Retrode.org/?wpdmdl=3
-    tar -jxvf binariesDownload.tar.bz2 -C $rootdir
-    pushd $rootdir/Retrode_Pi
-    cp -r * ../
-    popd
-
-    # handle Doom emulator specifics
-    cp $rootdir/emulators/libretro-prboom/prboom.wad $rootdir/roms/doom/
-    chgrp $user $rootdir/roms/doom/prboom.wad
-    chown $user $rootdir/roms/doom/prboom.wad
-
-    rm -rf $rootdir/Retrode_Pi
-    rm binariesDownload.tar.bz2    
-}
-
-# downloads and installs theme files for Emulation Station
-function install_esthemes()
-{
-    printMsg "Installing themes for Emulation Station"
-    wget -O themesDownload.tar.bz2 http://blog.Retrode.org/?wpdmdl=2
-    tar -jxvf themesDownload.tar.bz2 -C $home/
-
-    chgrp -R $user $home/.emulationstation
-    chown -R $user $home/.emulationstation
-
-    rm themesDownload.tar.bz2
-}
-
-# sets the ARM frequency of the Raspberry to a specific value
-function setArmFreq()
-{
-    cmd=(dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --menu "Choose the ARM frequency. However, it is suggested that you change this with the raspi-config script!" 22 76 16)
-    options=(700 "(default)"
-             750 "(do this at your own risk!)"
-             800 "(do this at your own risk!)"
-             850 "(do this at your own risk!)"
-             900 "(do this at your own risk!)"
-             1000 "(do this at your own risk!)")
-    armfreqchoice=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
-    if [ "$armfreqchoice" != "" ]; then                
-        if [[ -z $(egrep -i "#? *arm_freq=[0-9]*" /boot/config.txt) ]]; then
-            # add key-value pair
-            echo "arm_freq=$armfreqchoice" >> /boot/config.txt
-        else
-            # replace existing key-value pair
-            toreplace=`egrep -i "#? *arm_freq=[0-9]*" /boot/config.txt`
-            sed /boot/config.txt -i -e "s|$toreplace|arm_freq=$armfreqchoice|g"
-        fi 
-        dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --msgbox "ARM frequency set to $armfreqchoice MHz. If you changed the frequency, you need to reboot." 22 76    
-    fi
-}
-
-# sets the SD ram frequency of the Raspberry to a specific value
-function setSDRAMFreq()
-{
-    cmd=(dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --menu "Choose the ARM frequency. However, it is suggested that you change this with the raspi-config script!" 22 76 16)
-    options=(400 "(default)"
-             425 "(do this at your own risk!)"
-             450 "(do this at your own risk!)"
-             475 "(do this at your own risk!)"
-             500 "(do this at your own risk!)")
-    sdramfreqchoice=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
-    if [ "$sdramfreqchoice" != "" ]; then                
-        if [[ -z $(egrep -i "#? *sdram_freq=[0-9]*" /boot/config.txt) ]]; then
-            # add key-value pair
-            echo "sdram_freq=$sdramfreqchoice" >> /boot/config.txt
-        else
-            # replace existing key-value pair
-            toreplace=`egrep -i "#? *sdram_freq=[0-9]*" /boot/config.txt`
-            sed /boot/config.txt -i -e "s|$toreplace|sdram_freq=$sdramfreqchoice|g"
-        fi 
-        dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --msgbox "SDRAM frequency set to $sdramfreqchoice MHz. If you changed the frequency, you need to reboot." 22 76    
-    fi
-}
 
 # configure sound settings
 function configureSoundsettings()
@@ -499,7 +276,8 @@ type hw
 card 0
 }
 _EOF_
-
+	apt-get install alsa-utils
+	modprobe snd_bcm2835
 }
 
 # Disables safe mode (http://www.raspberrypi.org/phpBB3/viewtopic.php?p=129413) in order to make GPIO adapters work
@@ -532,200 +310,10 @@ function showHelp()
     echo ""
 }
 
-# Start Emulation Station on boot or not?
-function changeBootbehaviour()
-{
-    cmd=(dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --menu "Choose the desired boot behaviour." 22 76 16)
-    options=(1 "Original boot behaviour"
-             2 "Start Emulation Station at boot.")
-    choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
-    if [ "$choices" != "" ]; then
-        case $choices in
-            1) sed /etc/inittab -i -e "s|1:2345:respawn:/bin/login -f $user tty1 </dev/tty1 >/dev/tty1 2>&1|1:2345:respawn:/sbin/getty --noclear 38400 tty1|g"
-               sed /etc/profile -i -e "/emulationstation/d"
-               dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --msgbox "Enabled original boot behaviour." 22 76    
-                            ;;
-            2) sed /etc/inittab -i -e "s|1:2345:respawn:/sbin/getty --noclear 38400 tty1|1:2345:respawn:\/bin\/login -f $user tty1 \<\/dev\/tty1 \>\/dev\/tty1 2\>\&1|g"
-               if [ -z $(egrep -i "emulationstation$" /etc/profile) ]
-               then
-                   echo "[ -n \"\${SSH_CONNECTION}\" ] || emulationstation" >> /etc/profile
-               fi
-               dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --msgbox "Emulation Station is now starting on boot." 22 76    
-                            ;;
-        esac
-    else
-        break
-    fi    
-}
-
-function installGameconGPIOModule()
-{
-        clear
-
-    dialog --title " gamecon_gpio_rpi installation " --clear \
-    --yesno "Gamecon_gpio_rpi requires thats most recent kernel (firmware)\
-    is installed and active. Continue with gamecon_gpio_rpi\
-    installation?" 22 76
-    case $? in
-      0)
-        echo "Starting installation.";;
-      *)
-        return 0;;
-    esac
-
-    #install dkms
-    apt-get install -y dkms
-
-    #reconfigure / install headers (takes a a while)
-    if [ "$(dpkg-query -W -f='${Version}' linux-headers-$(uname -r))" = "$(uname -r)-2" ]; then
-        dpkg-reconfigure linux-headers-`uname -r`
-    else
-        wget http://www.niksula.hut.fi/~mhiienka/Rpi/linux-headers-rpi/linux-headers-`uname -r`_`uname -r`-2_armhf.deb
-        dpkg -i linux-headers-`uname -r`_`uname -r`-2_armhf.deb
-        rm linux-headers-`uname -r`_`uname -r`-2_armhf.deb
-    fi
-
-    #install gamecon
-    if [ "`dpkg-query -W -f='${Version}' gamecon-gpio-rpi-dkms`" = "0.9" ]; then
-        #dpkg-reconfigure gamecon-gpio-rpi-dkms
-        echo "gamecon is the newest version"
-    else
-            wget http://www.niksula.hut.fi/~mhiienka/Rpi/gamecon-gpio-rpi-dkms_0.9_all.deb
-            dpkg -i gamecon-gpio-rpi-dkms_0.9_all.deb
-        rm gamecon-gpio-rpi-dkms_0.9_all.deb
-    fi
-
-    #test if module installation is OK
-    if [[ -n $(modinfo -n gamecon_gpio_rpi | grep gamecon_gpio_rpi.ko) ]]; then
-            dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --msgbox "Gamecon GPIO driver successfully installed. \
-        Use 'zless /usr/share/doc/gamecon_gpio_rpi/README.gz' to read how to use it." 22 76
-    else
-        dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --msgbox "Gamecon GPIO driver installation FAILED"\
-        22 76
-    fi
-}
-
-function enableGameconSnes()
-{
-    if [ "`dpkg-query -W -f='${Status}' gamecon-gpio-rpi-dkms`" != "install ok installed" ]; then
-        dialog --msgbox "gamecon_gpio_rpi not found, install it first" 22 76
-        return 0
-    fi
-
-    REVSTRING=`cat /proc/cpuinfo |grep Revision | cut -d ':' -f 2 | tr -d ' \n' | tail -c 4`
-    case "$REVSTRING" in
-          "0002"|"0003")
-             GPIOREV=1 
-             ;;
-          *)
-             GPIOREV=2
-             ;;
-    esac
-
-dialog --msgbox "\
-__________\n\
-         |          ### Board gpio revision $GPIOREV detected ###\n\
-    + *  |\n\
-    * *  |\n\
-    1 -  |          The driver is set to use the following configuration\n\
-    2 *  |          for 2 SNES controllers:\n\
-    * *  |\n\
-    * *  |\n\
-    * *  |          + = power\n\
-    * *  |          - = ground\n\
-    * *  |          C = clock\n\
-    C *  |          L = latch\n\
-    * *  |          1 = player1 pad\n\
-    L *  |          2 = player2 pad\n\
-    * *  |          * = unconnected\n\
-         |\n\
-         |" 22 76
-
-    if [[ -n $(lsmod | grep gamecon_gpio_rpi) ]]; then
-        rmmod gamecon_gpio_rpi
-    fi
-
-    if [ $GPIOREV = 1 ]; then
-        modprobe gamecon_gpio_rpi map=0,1,1,0
-    else
-        modprobe gamecon_gpio_rpi map=0,0,1,0,0,1
-    fi
-
-    dialog --title " Update $rootdir/configs/all/retroarch.cfg " --clear \
-        --yesno "Would you like to update button mappings \
-    to $rootdir/configs/all/retroarch.cfg ?" 22 76
-
-      case $? in
-       0)
-    if [ $GPIOREV = 1 ]; then
-            ensureKeyValue "input_player1_joypad_index" "0" "$rootdir/configs/all/retroarch.cfg"
-            ensureKeyValue "input_player2_joypad_index" "1" "$rootdir/configs/all/retroarch.cfg"
-    else
-        ensureKeyValue "input_player1_joypad_index" "1" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player2_joypad_index" "0" "$rootdir/configs/all/retroarch.cfg"
-    fi
-
-        ensureKeyValue "input_player1_a_btn" "0" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player1_b_btn" "1" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player1_x_btn" "2" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player1_y_btn" "3" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player1_l_btn" "4" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player1_r_btn" "5" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player1_start_btn" "7" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player1_select_btn" "6" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player1_left_axis" "-0" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player1_up_axis" "-1" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player1_right_axis" "+0" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player1_down_axis" "+1" "$rootdir/configs/all/retroarch.cfg"
-
-        ensureKeyValue "input_player2_a_btn" "0" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player2_b_btn" "1" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player2_x_btn" "2" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player2_y_btn" "3" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player2_l_btn" "4" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player2_r_btn" "5" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player2_start_btn" "7" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player2_select_btn" "6" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player2_left_axis" "-0" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player2_up_axis" "-1" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player2_right_axis" "+0" "$rootdir/configs/all/retroarch.cfg"
-        ensureKeyValue "input_player2_down_axis" "+1" "$rootdir/configs/all/retroarch.cfg"
-    ;;
-       *)
-        ;;
-      esac
-
-    dialog --title " Enable SNES configuration permanently " --clear \
-        --yesno "Would you like to permanently enable SNES configuration?\
-        " 22 76
-
-    case $? in
-      0)
-    if [[ -z $(cat /etc/modules | grep gamecon_gpio_rpi) ]]; then
-    if [ $GPIOREV = 1 ]; then
-                addLineToFile "gamecon_gpio_rpi map=0,1,1,0" "/etc/modules"
-    else
-        addLineToFile "gamecon_gpio_rpi map=0,0,1,0,0,1" "/etc/modules"
-    fi
-    fi
-    ;;
-      *)
-        #TODO: delete the line from /etc/modules
-        ;;
-    esac
-
-    dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --msgbox \
-    "Gamecon GPIO driver enabled with 2 SNES pads." 22 76
-}
-
 function checkNeededPackages()
 {
-    doexit=0
-    type -P git &>/dev/null && echo "Found git command." || { echo "Did not find git. Try 'sudo apt-get install -y git' first."; doexit=1; }
-    type -P dialog &>/dev/null && echo "Found dialog command." || { echo "Did not find dialog. Try 'sudo apt-get install -y dialog' first."; doexit=1; }
-    if [[ doexit -eq 1 ]]; then
-        exit 1
-    fi
+	sudo apt-get install -y git
+    sudo apt-get install -y dialog
 }
 
 function main_reboot()
@@ -749,15 +337,6 @@ function createDebugLog()
     echo -e "\nActive lines in $rootdir/configs/all/retroarch.cfg:" >> "$rootdir/debug.log"
     sed '/^$\|^#/d' "$rootdir/configs/all/retroarch.cfg"  >>  "$rootdir/debug.log"
 
-    echo -e "\nEmulation Station files:" >> "$rootdir/debug.log"
-    checkFileExistence "$rootdir/supplementary/EmulationStation/emulationstation"
-    checkFileExistence "$rootdir/../.emulationstation/es_systems.cfg"
-    checkFileExistence "$rootdir/../.emulationstation/es_input.cfg"
-    echo -e "\nContent of es_systems.cfg:" >> "$rootdir/debug.log"
-    cat "$rootdir/../.emulationstation/es_systems.cfg" >> "$rootdir/debug.log"
-    echo -e "\nContent of es_input.cfg:" >> "$rootdir/debug.log"
-    cat "$rootdir/../.emulationstation/es_input.cfg" >> "$rootdir/debug.log"
-
     echo -e "\nEmulators and cores:" >> "$rootdir/debug.log"
     checkFileExistence "`find $rootdir/emulators/stella-libretro/ -name "*libretro*.so"`"
     checkFileExistence "`find $rootdir/emulators/gambatte-libretro/ -name "*libretro*.so"`"
@@ -766,14 +345,6 @@ function createDebugLog()
     echo -e "\nSummary of ROMS directory:" >> "$rootdir/debug.log"
     du -ch --max-depth=1 "$rootdir/roms/" >> "$rootdir/debug.log"
 
-    echo -e "\nUnrecognized ROM extensions:" >> "$rootdir/debug.log"
-    find "$rootdir/roms/atari2600/" -type f ! \( -iname "*.bin" -or -iname "*.jpg" -or -iname "*.xml" \) >> "$rootdir/debug.log"
-    find "$rootdir/roms/gamegear/" -type f ! \( -iname "*.gg" -or -iname "*.jpg" -or -iname "*.xml" \) >> "$rootdir/debug.log"
-    find "$rootdir/roms/gba/" -type f ! \( -iname "*.gba" -or -iname "*.jpg" -or -iname "*.xml" \) >> "$rootdir/debug.log"
-    find "$rootdir/roms/gbc/" -type f ! \( -iname "*.gb" -or -iname "*.jpg" -or -iname "*.xml" \) >> "$rootdir/debug.log"
-    find "$rootdir/roms/mastersystem/" -type f ! \( -iname "*.sms" -or -iname "*.jpg" -or -iname "*.xml" \) >> "$rootdir/debug.log"
-    find "$rootdir/roms/megadrive/" -type f ! \( -iname "*.smd" -or -iname "*.jpg" -or -iname "*.xml" \) >> "$rootdir/debug.log"
-    find "$rootdir/roms/snes/" -type f ! \( -iname "*.smc" -or -iname "*.jpg" -or -iname "*.xml" \) >> "$rootdir/debug.log"
 
     echo -e "\nCheck for needed APT packages:" >> "$rootdir/debug.log"
     checkForInstalledAPTPackage "libsdl1.2-dev" >> "$rootdir/debug.log"
@@ -812,52 +383,14 @@ function main_binaries()
     install_rpiupdate
     update_apt
     upgrade_apt
-    run_rpiupdate
+	run_rpiupdate
     installAPTPackages
     ensure_modules
     add_to_groups
     exportSDLNOMOUSE
     prepareFolders
-    downloadBinaries
-    fixForXBian
-    
-    # install RetroArch
-    install -m755 $rootdir/RetroArch/retroarch /usr/local/bin
-    install -m644 $rootdir/RetroArch/retroarch.cfg /etc/retroarch.cfg
-    install -m755 $rootdir/RetroArch/retroarch-zip /usr/local/bin
-    configureRetroArch
-    configure_snes
-    install_esthemes
-    configureSoundsettings
-    install_scummvm
-    install_zmachine
-    install_zxspectrum
-
-    # install DGEN
-    test -z "/usr/local/bin" || /bin/mkdir -p "/usr/local/bin"
-    /usr/bin/install -c $rootdir/emulators/dgen-sdl-1.31/installdir/usr/local/bin/dgen $rootdir/emulators/dgen-sdl-1.31/installdir/usr/local/bin/dgen_tobin '/usr/local/bin'
-    test -z "/usr/local/share/man/man1" || /bin/mkdir -p "/usr/local/share/man/man1"
-    /usr/bin/install -c -m 644 $rootdir/emulators/dgen-sdl-1.31/installdir/usr/local/share/man/man1/dgen.1 $rootdir/emulators/dgen-sdl-1.31/installdir/usr/local/share/man/man1/dgen_tobin.1 '/usr/local/share/man/man1'
-    test -z "/usr/local/share/man/man5" || /bin/mkdir -p "/usr/local/share/man/man5"
-    /usr/bin/install -c -m 644 $rootdir/emulators/dgen-sdl-1.31/installdir/usr/local/share/man/man5/dgenrc.5 '/usr/local/share/man/man5'
-    configureDGEN
-
-    chgrp -R $user $rootdir
-    chown -R $user $rootdir
-
-    setAvoidSafeMode
-
-    createDebugLog
-
-    __INFMSGS="$__INFMSGS The Amiga emulator can be started from command line with '$rootdir/emulators/uae4all/uae4all'. Note that you must manually copy a Kickstart rom with the name 'kick.rom' to the directory $rootdir/emulators/uae4all/."
-    __INFMSGS="$__INFMSGS You need to copy NeoGeo BIOS files to the folder '$rootdir/emulators/gngeo-0.7/neogeo-bios/'."
-    __INFMSGS="$__INFMSGS You need to copy Intellivision BIOS files to the folder '/usr/local/share/jzintv/rom'."
-
-    if [[ ! -z $__INFMSGS ]]; then
-        dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --msgbox "$__INFMSGS" 20 60    
-    fi
-
-    dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --msgbox "Finished tasks.\nStart the front end with 'emulationstation'. You now have to copy roms to the roms folders. Have fun!" 22 76    
+   
+	
 }
 
 function main_updatescript()
@@ -874,9 +407,25 @@ function main_updatescript()
   dialog --backtitle "Retrode.org - Retrode_Pi Setup." --msgbox "Fetched the latest version of the Retrode_Pi Setup script. You need to restart the script." 20 60    
 }
 function main_setup(){
+	#Make Sure User has Rights to Folder
+	chgrp -R $user $rootdir
+    chown -R $user $rootdir
 
+	#Startup Cleaner
+	starup_setup
+	
+	main_binaries
+	
+	#Make Sure User has Rights to Folder (Double Check After Binaries Installation)
+	chgrp -R $user $rootdir
+    chown -R $user $rootdir
+
+	#Retroarch
+	install_retroarch
+	configureRetroArch
+	
 	#ATARI 2600
-	atari2600
+	install_atari2600
 
 	#GBA
 	install_gba
@@ -884,7 +433,7 @@ function main_setup(){
 	#MEGA DRIVE/GENESIS
 	install_megadrive
 
-	#MASTER SYSTEM
+	#GAMEGEAR
 	install_megadriveLibretro
 
 	#GAMEBOY
@@ -893,12 +442,36 @@ function main_setup(){
 	#SNES
 	install_snes
 	configure_snes
-
+	
 	#GENESIS
-	configureDGEN
 	install_dgen
+	configureDGEN
+	
+	#Configure Last Minute Items
+	configureSoundsettings
+	
+	#remove any un-needed objects
+	sudo apt-get clean all
+	
+	chgrp -R $user $rootdir
+    chown -R $user $rootdir
 
+	finalize_setup
+	
+	#set HDMI Mod
+	ensureKeyValue "hdmi_drive" "2" "/boot/config.txt"
+		
+	#Create Load Script
+	
+	#Change .Profile to Load Script
+	
+	#Set to Auto Boot to Pi User
+	
+    setAvoidSafeMode
+
+    createDebugLog
 }
+
 # install Game Boy Color emulator core
 function install_gbc()
 {
@@ -924,7 +497,6 @@ function install_atari2600()
     fi  
     popd    
 }
-
 
 
 # configure DGEN
@@ -1034,6 +606,35 @@ function configure_snes()
     ensureKeyValue "rewind_enable" "false" "$rootdir/configs/snes/retroarch.cfg"
 }
 
+function starup_setup(){
+	sudo apt-get update
+	sudo apt-get -y dist-upgrade
+	sudo apt-get -y install git-core binutils
+	sudo apt-get install -y dialog
+	sudo apt-get install gcc build-essential libsdl1.2-dev
+	sudo apt-get clean all
+}
+
+function finalize_setup(){
+
+	#apt-get purge -y ca-certificates libraspberrypi-doc xkb-data fonts-freefont-ttf locales manpages midori lxde penguins puzzle lxde-icon-theme lxde-common omxplayer xdg-utils wireless-tools wpasupplicant penguinspuzzle samba-common firmware-atheros firmware-brcm80211 firmware-ralink firmware-realtek gcc-4.4-base:armhf gcc-4.5-base:armhf gcc-4.6-base:armhf ca-certificates libraspberrypi-doc xkb-data fonts-freefont-ttf manpages
+	#apt-get autoremove
+	#apt-get clean all
+	swapoff -a
+	dpkg --configure -a
+	apt-get purge -y dphys-swapfile
+	rm /var/swap
+	rm -R /etc/wpa_supplicant
+	rm -R /etc/console-setup
+	rm -R /usr/share/icons
+	rm -R Desktop
+	rm -fr /usr/share/doc/*
+	rm -rf python_games
+	rm ocr_pi.png
+	cd /var/log/ 
+	rm `find . -type f`
+}
+
 ######################################
 # here starts the main loop ##########
 ######################################
@@ -1050,10 +651,6 @@ if [ $(id -u) -ne 0 ]; then
   exit 1
 fi
 
-# if called with sudo ./retrodepi_setup.sh, the installation directory is /home/CURRENTUSER/Retrode_Pi for the current user
-# if called with sudo ./retrodepi_setup.sh USERNAME, the installation directory is /home/USERNAME/Retrode_Pi for user USERNAME
-# if called with sudo ./retrodepi_setup.sh USERNAME ABSPATH, the installation directory is ABSPATH for user USERNAME
-    
 if [[ $# -lt 1 ]]; then
     user=$SUDO_USER
     if [ -z "$user" ]
@@ -1069,7 +666,6 @@ elif [[ $# -lt 3 ]]; then
     rootdir=$2
 fi
 
-esscrapimgw=275 # width in pixel for EmulationStation games scraper
 
 home=$(eval echo ~$user)
 
@@ -1081,10 +677,8 @@ if [[ ! -d $rootdir ]]; then
     fi
 fi
 
-availFreeDiskSpace 600000
-
 while true; do
-    cmd=(dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --menu "Choose installation either based on binaries or on sources." 22 76 16)
+    cmd=(dialog --backtitle "Retrode.org - Retrode_Pi Setup. Installation folder: $rootdir for user $user" --menu "Retrode Pi Setup Menu." 22 76 16)
     # options=(1 "Binaries-based installation (faster, (probably) not the newest)"
     options=(1 "Setup Retrode Pi (AiO) *Note This will take a while*"
              2 "Update Retrode_Pi Setup script"
