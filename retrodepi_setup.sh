@@ -4,6 +4,7 @@ __ERRMSGS=""
 __INFMSGS=""
 __doReboot=0
 
+
 function addLineToFile()
 {
     if [[ -f "$2" ]]; then
